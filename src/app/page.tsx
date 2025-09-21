@@ -1,241 +1,138 @@
-'use client';
+import Link from 'next/link'
 
-import { useState, useMemo } from 'react';
-import Link from 'next/link';
-import { StandupEntry, FilterOptions, User } from '@/lib/types';
-import { mockStandupEntries, mockUsers, mockProjects } from '@/lib/mock-data';
-import { StandupCard } from '@/components/StandupCard';
-import { StandupForm } from '@/components/StandupForm';
-import { FilterPanel } from '@/components/FilterPanel';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Users, Calendar, BarChart3, Settings } from 'lucide-react';
-
-export default function Dashboard() {
-  const [entries, setEntries] = useState<StandupEntry[]>(mockStandupEntries);
-  const [filters, setFilters] = useState<FilterOptions>({});
-  const [isFormOpen, setIsFormOpen] = useState(true);
-  const [editingEntry, setEditingEntry] = useState<StandupEntry | null>(null);
-
-  // Simulate current user (in real app, this would come from auth)
-  const currentUser = mockUsers[1]; // Mike Johnson as the current user
-
-  const filteredEntries = useMemo(() => {
-    return entries.filter(entry => {
-      if (filters.userId && entry.userId !== filters.userId) return false;
-      if (filters.project && entry.project !== filters.project) return false;
-      if (filters.dateFrom && entry.date < filters.dateFrom) return false;
-      if (filters.dateTo && entry.date > filters.dateTo) return false;
-      return true;
-    });
-  }, [entries, filters]);
-
-  const sortedEntries = useMemo(() => {
-    return [...filteredEntries].sort((a, b) => {
-      // Sort by date (newest first), then by creation time
-      const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime();
-      if (dateComparison !== 0) return dateComparison;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-  }, [filteredEntries]);
-
-  const handleSubmitEntry = (entryData: Partial<StandupEntry>) => {
-    if (editingEntry) {
-      // Update existing entry
-      setEntries(prev => prev.map(entry =>
-        entry.id === editingEntry.id
-          ? { ...entry, ...entryData } as StandupEntry
-          : entry
-      ));
-      setEditingEntry(null);
-    } else {
-      // Add new entry
-      setEntries(prev => [...prev, entryData as StandupEntry]);
-    }
-  };
-
-  const handleEditEntry = (entry: StandupEntry) => {
-    setEditingEntry(entry);
-    setIsFormOpen(true);
-  };
-
-  const handleDeleteEntry = (id: string) => {
-    setEntries(prev => prev.filter(entry => entry.id !== id));
-  };
-
-  const handleCloseForm = () => {
-    setIsFormOpen(false);
-    setEditingEntry(null);
-  };
-
-  const todayEntries = sortedEntries.filter(entry =>
-    entry.date === new Date().toISOString().split('T')[0]
-  );
-
-  const totalBlockers = sortedEntries.filter(entry =>
-    entry.blockers && !entry.blockers.toLowerCase().includes('none') && entry.blockers.trim() !== ''
-  ).length;
-
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
-
+export default function Home() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Users className="h-5 w-5 text-white" />
-                </div>
-                <h1 className="text-2xl font-bold text-gray-900">VSM Stand-ups</h1>
-              </div>
-              <Badge variant="outline" className="hidden sm:inline-flex">
-                Virtual Stand-up Meeting Platform
-              </Badge>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-slate-900 mb-6">User Story Collection</h1>
+          <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+            Comprehensive guide for implementing the Team Stand-up Dashboard application
+          </p>
+        </div>
 
-            <div className="flex items-center space-x-4">
-              <div className="hidden md:flex items-center space-x-6">
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <Calendar className="h-4 w-4" />
-                  <span>Today: {todayEntries.length} entries</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <BarChart3 className="h-4 w-4" />
-                  <span>Blockers: {totalBlockers}</span>
-                </div>
-              </div>
+        {/* Navigation Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <NavigationCard
+            href="/user-personas"
+            title="User Personas"
+            description="Detailed profiles of target users with goals, frustrations, and tech-savvy levels"
+            icon="👥"
+            color="bg-blue-500"
+          />
+          <NavigationCard
+            href="/user-stories"
+            title="User Stories"
+            description="Complete collection of user stories organized by priority with acceptance criteria"
+            icon="📝"
+            color="bg-green-500"
+          />
+          <NavigationCard
+            href="/user-journey"
+            title="User Journey"
+            description="Journey maps showing how users interact with the system and their pain points"
+            icon="🗺️"
+            color="bg-purple-500"
+          />
+          <NavigationCard
+            href="/implementation"
+            title="Implementation"
+            description="4-phase roadmap with technical considerations and success metrics"
+            icon="🚀"
+            color="bg-orange-500"
+          />
+        </div>
 
-              <Button onClick={() => setIsFormOpen(true)} className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Entry
-              </Button>
-
-              <Link href="/profile" className="flex items-center space-x-2 hover:bg-gray-100 rounded-lg p-2 transition-colors">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
-                  <AvatarFallback className="bg-blue-100 text-blue-700 text-sm">
-                    {getInitials(currentUser.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:block text-sm font-medium text-gray-700">
-                  {currentUser.name}
-                </span>
-              </Link>
-            </div>
+        {/* New Research Section */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-12 border">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-slate-900 mb-4">📊 Research & Moods</h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Explore user research findings, visual direction, and design principles for the project
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <Link
+              href="/research-moods"
+              className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold py-4 px-8 rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-1"
+            >
+              <span className="text-xl">🔍</span>
+              View Research & Moods
+              <span className="text-sm bg-white/20 px-2 py-1 rounded">NEW</span>
+            </Link>
           </div>
         </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Filter Panel */}
-          <div className="lg:col-span-1">
-            <FilterPanel
-              filters={filters}
-              onFiltersChange={setFilters}
-              users={mockUsers}
-              projects={mockProjects}
-              className="sticky top-24"
-            />
-          </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            <div className="space-y-6">
-              {/* Summary Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:hidden">
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <p className="text-sm text-gray-600">Today's Entries</p>
-                      <p className="text-2xl font-bold text-gray-900">{todayEntries.length}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center space-x-2">
-                    <BarChart3 className="h-5 w-5 text-red-600" />
-                    <div>
-                      <p className="text-sm text-gray-600">Active Blockers</p>
-                      <p className="text-2xl font-bold text-gray-900">{totalBlockers}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-lg border border-gray-200">
-                  <div className="flex items-center space-x-2">
-                    <Users className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="text-sm text-gray-600">Total Entries</p>
-                      <p className="text-2xl font-bold text-gray-900">{filteredEntries.length}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Entries Header */}
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Stand-up Entries ({sortedEntries.length})
-                </h2>
-                {Object.values(filters).some(v => v) && (
-                  <Badge variant="secondary">
-                    Filtered results
-                  </Badge>
-                )}
-              </div>
-
-              {/* Entries Grid */}
-              {sortedEntries.length === 0 ? (
-                <div className="text-center py-12">
-                  <Users className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No entries found</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {Object.values(filters).some(v => v)
-                      ? 'Try adjusting your filters or add a new entry.'
-                      : 'Get started by adding your first stand-up entry.'
-                    }
-                  </p>
-                  <div className="mt-6">
-                    <Button onClick={() => setIsFormOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Entry
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-6">
-                  {sortedEntries.map((entry) => (
-                    <StandupCard
-                      key={entry.id}
-                      entry={entry}
-                      onEdit={handleEditEntry}
-                      onDelete={handleDeleteEntry}
-                      isOwnEntry={entry.userId === currentUser.id}
-                    />
-                  ))}
-                </div>
-              )}
+        {/* Quick Overview */}
+        <div className="bg-white rounded-lg shadow-md p-6 border">
+          <h3 className="text-xl font-bold mb-4 text-slate-900">Project Overview</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <h4 className="font-semibold text-slate-700 mb-2">Must-Have Features</h4>
+              <ul className="text-slate-600 space-y-1">
+                <li>• Daily stand-up submission</li>
+                <li>• Team dashboard feed</li>
+                <li>• Blockers overview</li>
+                <li>• User authentication</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-slate-700 mb-2">Key User Types</h4>
+              <ul className="text-slate-600 space-y-1">
+                <li>• Software Developers</li>
+                <li>• Scrum Masters</li>
+                <li>• Project Managers</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-slate-700 mb-2">Implementation Timeline</h4>
+              <ul className="text-slate-600 space-y-1">
+                <li>• Phase 1: Core MVP (2-3 weeks)</li>
+                <li>• Phase 2: Enhanced (1-2 weeks)</li>
+                <li>• Phase 3: Nice-to-Have (2-3 weeks)</li>
+                <li>• Phase 4: Future (3-4 weeks)</li>
+              </ul>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Form Modal */}
-      <StandupForm
-        isOpen={isFormOpen}
-        onClose={handleCloseForm}
-        onSubmit={handleSubmitEntry}
-        editEntry={editingEntry}
-        projects={mockProjects}
-        currentUser={currentUser}
-      />
     </div>
-  );
+  )
+}
+
+function NavigationCard({
+  href,
+  title,
+  description,
+  icon,
+  color
+}: {
+  href: string
+  title: string
+  description: string
+  icon: string
+  color: string
+}) {
+  return (
+    <Link
+      href={href}
+      className="bg-white rounded-lg shadow-md p-6 border hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group"
+    >
+      <div className="flex flex-col h-full">
+        <div className={`w-12 h-12 ${color} rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200`}>
+          <span className="text-xl text-white">{icon}</span>
+        </div>
+        <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">
+          {title}
+        </h3>
+        <p className="text-slate-600 text-sm leading-relaxed flex-grow">
+          {description}
+        </p>
+        <div className="mt-4 text-blue-500 font-medium text-sm group-hover:text-blue-600">
+          Explore →
+        </div>
+      </div>
+    </Link>
+  )
 }
