@@ -15,7 +15,7 @@ import { Plus, Users, Calendar, BarChart3, Settings } from 'lucide-react';
 export default function Dashboard() {
   const [entries, setEntries] = useState<StandupEntry[]>(mockStandupEntries);
   const [filters, setFilters] = useState<FilterOptions>({});
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(true);
   const [editingEntry, setEditingEntry] = useState<StandupEntry | null>(null);
 
   // Simulate current user (in real app, this would come from auth)
