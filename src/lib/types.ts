@@ -17,7 +17,9 @@ export interface User {
   name: string;
   email: string;
   avatar?: string;
+  image?: string; // OAuth provider image
   role: 'Team Member' | 'Scrum Master' | 'Project Manager' | 'Admin';
+  provider?: string; // OAuth provider (google, github)
 }
 
 export interface Project {

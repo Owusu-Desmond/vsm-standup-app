@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { StandupEntry, FilterOptions, User } from '@/lib/types';
 import { mockStandupEntries, mockUsers, mockProjects } from '@/lib/mock-data';
@@ -10,18 +11,37 @@ import { FilterPanel } from '@/components/FilterPanel';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Users, Calendar, BarChart3, Settings } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Plus, Users, Calendar, BarChart3, Settings, LogOut, ChevronDown, User as UserIcon } from 'lucide-react';
 
 export default function Dashboard() {
+  const { data: session, status } = useSession();
   const [entries, setEntries] = useState<StandupEntry[]>(mockStandupEntries);
   const [filters, setFilters] = useState<FilterOptions>({});
   const [isFormOpen, setIsFormOpen] = useState(true);
   const [editingEntry, setEditingEntry] = useState<StandupEntry | null>(null);
 
-  // Simulate current user (in real app, this would come from auth)
-  const currentUser = mockUsers[1]; // Mike Johnson as the current user
+  // Create current user from session data (with fallbacks for loading state)
+  const currentUser: User = {
+    id: session?.user?.id || 'loading',
+    name: session?.user?.name || 'Loading...',
+    email: session?.user?.email || '',
+    avatar: session?.user?.image || undefined,
+    image: session?.user?.image || undefined,
+    role: 'Team Member', // Default role, could be fetched from database
+    provider: session?.provider,
+  };
 
+  // Filter entries to show user's own entries first, then others (read-only)
   const filteredEntries = useMemo(() => {
+    if (!session?.user) return [];
     return entries.filter(entry => {
       if (filters.userId && entry.userId !== filters.userId) return false;
       if (filters.project && entry.project !== filters.project) return false;
@@ -29,7 +49,7 @@ export default function Dashboard() {
       if (filters.dateTo && entry.date > filters.dateTo) return false;
       return true;
     });
-  }, [entries, filters]);
+  }, [entries, filters, session?.user]);
 
   const sortedEntries = useMemo(() => {
     return [...filteredEntries].sort((a, b) => {
@@ -39,6 +59,35 @@ export default function Dashboard() {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
   }, [filteredEntries]);
+
+  const todayEntries = useMemo(() => {
+    return sortedEntries.filter(entry =>
+      entry.date === new Date().toISOString().split('T')[0]
+    );
+  }, [sortedEntries]);
+
+  const totalBlockers = useMemo(() => {
+    return sortedEntries.filter(entry =>
+      entry.blockers && !entry.blockers.toLowerCase().includes('none') && entry.blockers.trim() !== ''
+    ).length;
+  }, [sortedEntries]);
+
+  // Show loading if session is loading
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no session, this will be handled by middleware redirect
+  if (!session?.user) {
+    return null;
+  }
 
   const handleSubmitEntry = (entryData: Partial<StandupEntry>) => {
     if (editingEntry) {
@@ -56,11 +105,20 @@ export default function Dashboard() {
   };
 
   const handleEditEntry = (entry: StandupEntry) => {
+    // Only allow editing own entries
+    if (entry.userId !== currentUser.id) {
+      return;
+    }
     setEditingEntry(entry);
     setIsFormOpen(true);
   };
 
   const handleDeleteEntry = (id: string) => {
+    // Only allow deleting own entries
+    const entryToDelete = entries.find(entry => entry.id === id);
+    if (entryToDelete && entryToDelete.userId !== currentUser.id) {
+      return;
+    }
     setEntries(prev => prev.filter(entry => entry.id !== id));
   };
 
@@ -68,14 +126,6 @@ export default function Dashboard() {
     setIsFormOpen(false);
     setEditingEntry(null);
   };
-
-  const todayEntries = sortedEntries.filter(entry =>
-    entry.date === new Date().toISOString().split('T')[0]
-  );
-
-  const totalBlockers = sortedEntries.filter(entry =>
-    entry.blockers && !entry.blockers.toLowerCase().includes('none') && entry.blockers.trim() !== ''
-  ).length;
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -116,17 +166,46 @@ export default function Dashboard() {
                 Add Entry
               </Button>
 
-              <Link href="/profile" className="flex items-center space-x-2 hover:bg-gray-100 rounded-lg p-2 transition-colors">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
-                  <AvatarFallback className="bg-blue-100 text-blue-700 text-sm">
-                    {getInitials(currentUser.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden sm:block text-sm font-medium text-gray-700">
-                  {currentUser.name}
-                </span>
-              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center space-x-2 hover:bg-gray-100 rounded-lg p-2 transition-colors">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={currentUser.avatar || currentUser.image} alt={currentUser.name} />
+                      <AvatarFallback className="bg-blue-100 text-blue-700 text-sm">
+                        {getInitials(currentUser.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden sm:block text-sm font-medium text-gray-700">
+                      {currentUser.name}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center">
+                      <UserIcon className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="flex items-center">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
