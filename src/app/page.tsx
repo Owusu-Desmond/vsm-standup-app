@@ -25,7 +25,7 @@ export default function Dashboard() {
   const { data: session, status } = useSession();
   const [entries, setEntries] = useState<StandupEntry[]>(mockStandupEntries);
   const [filters, setFilters] = useState<FilterOptions>({});
-  const [isFormOpen, setIsFormOpen] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<StandupEntry | null>(null);
 
   // Create current user from session data (with fallbacks for loading state)

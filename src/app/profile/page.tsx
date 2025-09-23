@@ -28,7 +28,7 @@ import {
 export default function ProfilePage() {
   // Simulate current user (in real app, this would come from auth)
   const currentUser = mockUsers[1]; // Mike Johnson
-  const [isEditingProfile, setIsEditingProfile] = useState(true);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileData, setProfileData] = useState({
     name: currentUser.name,
     email: currentUser.email,
